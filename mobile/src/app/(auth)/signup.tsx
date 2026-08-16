@@ -1,19 +1,17 @@
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
+import { Pressable, StyleSheet } from "react-native";
 import { Link } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { ThemedText } from "@/components/themed-text";
-import { ThemedView } from "@/components/themed-view";
 import { useAuth } from "@/context/AuthContext";
-import { useTheme } from "@/hooks/use-theme";
-import { Spacing } from "@/constants/theme";
 import { ApiClientError } from "@/api/client";
+import { AuthLayout } from "@/components/auth/AuthLayout";
+import { AuthField } from "@/components/auth/AuthField";
+import { AuthButton } from "@/components/auth/AuthButton";
 
 const USERNAME_RE = /^[a-zA-Z0-9_]+$/;
 
 export default function SignupScreen() {
   const { signup } = useAuth();
-  const theme = useTheme();
 
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -50,131 +48,60 @@ export default function SignupScreen() {
   const canSubmit = username.length > 0 && email.length > 0 && password.length > 0 && !isSubmitting;
 
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.flex}>
-          <ScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled">
-            <ThemedText type="title" style={styles.title}>
-              Create account
+    <AuthLayout
+      heading="Create account"
+      subheading="Join Mini Social in a few seconds"
+      footer={
+        <Link href="/login" asChild>
+          <Pressable hitSlop={8}>
+            <ThemedText themeColor="textSecondary">
+              Have an account? <ThemedText themeColor="primary">Log in</ThemedText>
             </ThemedText>
+          </Pressable>
+        </Link>
+      }
+    >
+      <AuthField
+        placeholder="Username"
+        autoCapitalize="none"
+        value={username}
+        onChangeText={setUsername}
+        error={fieldErrors.username}
+      />
+      <AuthField placeholder="Display name (optional)" value={displayName} onChangeText={setDisplayName} />
+      <AuthField
+        placeholder="Email"
+        autoCapitalize="none"
+        autoComplete="email"
+        keyboardType="email-address"
+        value={email}
+        onChangeText={setEmail}
+        error={fieldErrors.email}
+      />
+      <AuthField
+        placeholder="Password"
+        secureTextEntry
+        autoCapitalize="none"
+        value={password}
+        onChangeText={setPassword}
+        error={fieldErrors.password}
+      />
 
-            <View style={styles.field}>
-              <TextInput
-                placeholder="Username"
-                placeholderTextColor={theme.textSecondary}
-                autoCapitalize="none"
-                value={username}
-                onChangeText={setUsername}
-                style={[styles.input, { color: theme.text, borderColor: theme.border }]}
-              />
-              {fieldErrors.username && (
-                <ThemedText themeColor="danger" type="small">
-                  {fieldErrors.username}
-                </ThemedText>
-              )}
-            </View>
+      {error && (
+        <ThemedText themeColor="danger" style={styles.error}>
+          {error}
+        </ThemedText>
+      )}
 
-            <View style={styles.field}>
-              <TextInput
-                placeholder="Display name (optional)"
-                placeholderTextColor={theme.textSecondary}
-                value={displayName}
-                onChangeText={setDisplayName}
-                style={[styles.input, { color: theme.text, borderColor: theme.border }]}
-              />
-            </View>
-
-            <View style={styles.field}>
-              <TextInput
-                placeholder="Email"
-                placeholderTextColor={theme.textSecondary}
-                autoCapitalize="none"
-                autoComplete="email"
-                keyboardType="email-address"
-                value={email}
-                onChangeText={setEmail}
-                style={[styles.input, { color: theme.text, borderColor: theme.border }]}
-              />
-              {fieldErrors.email && (
-                <ThemedText themeColor="danger" type="small">
-                  {fieldErrors.email}
-                </ThemedText>
-              )}
-            </View>
-
-            <View style={styles.field}>
-              <TextInput
-                placeholder="Password"
-                placeholderTextColor={theme.textSecondary}
-                secureTextEntry
-                autoCapitalize="none"
-                value={password}
-                onChangeText={setPassword}
-                style={[styles.input, { color: theme.text, borderColor: theme.border }]}
-              />
-              {fieldErrors.password && (
-                <ThemedText themeColor="danger" type="small">
-                  {fieldErrors.password}
-                </ThemedText>
-              )}
-            </View>
-
-            {error && (
-              <ThemedText themeColor="danger" style={styles.error}>
-                {error}
-              </ThemedText>
-            )}
-
-            <Pressable
-              onPress={onSubmit}
-              disabled={!canSubmit}
-              style={[styles.button, { backgroundColor: theme.primary, opacity: canSubmit ? 1 : 0.5 }]}
-            >
-              <ThemedText style={styles.buttonText}>{isSubmitting ? "Creating..." : "Create account"}</ThemedText>
-            </Pressable>
-
-            <Link href="/login" asChild>
-              <Pressable style={styles.linkRow}>
-                <ThemedText themeColor="textSecondary">
-                  Have an account? <ThemedText themeColor="primary">Log in</ThemedText>
-                </ThemedText>
-              </Pressable>
-            </Link>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-    </ThemedView>
+      <AuthButton
+        label={isSubmitting ? "Creating..." : "Create account"}
+        onPress={onSubmit}
+        disabled={!canSubmit}
+      />
+    </AuthLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  flex: { flex: 1 },
-  safeArea: { flex: 1 },
-  form: {
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.five,
-    gap: Spacing.two,
-    width: "100%",
-    maxWidth: 480,
-    alignSelf: "center",
-  },
-  title: { textAlign: "center", marginBottom: Spacing.three },
-  field: { marginBottom: Spacing.one, gap: Spacing.half },
-  input: {
-    borderWidth: 1,
-    borderRadius: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    fontSize: 16,
-  },
   error: { textAlign: "center" },
-  button: {
-    borderRadius: Spacing.two,
-    paddingVertical: Spacing.three,
-    alignItems: "center",
-    marginTop: Spacing.two,
-  },
-  buttonText: { color: "#ffffff", fontWeight: "600" },
-  linkRow: { alignItems: "center", marginTop: Spacing.three },
 });

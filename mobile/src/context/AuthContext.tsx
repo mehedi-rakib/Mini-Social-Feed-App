@@ -1,7 +1,7 @@
-import * as SecureStore from "expo-secure-store";
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import * as authApi from "@/api/auth";
 import { setAuthToken, setUnauthorizedHandler } from "@/api/client";
+import { getToken, setToken, deleteToken } from "@/lib/tokenStorage";
 import type { PublicUser } from "@/api/types";
 
 const TOKEN_KEY = "auth_token";
@@ -24,7 +24,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUnauthorizedHandler(() => {
       setAuthToken(null);
       setUser(null);
-      SecureStore.deleteItemAsync(TOKEN_KEY).catch(() => {});
+      deleteToken(TOKEN_KEY).catch(() => {});
     });
     return () => setUnauthorizedHandler(null);
   }, []);
@@ -32,14 +32,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     (async () => {
       try {
-        const token = await SecureStore.getItemAsync(TOKEN_KEY);
+        const token = await getToken(TOKEN_KEY);
         if (!token) return;
         setAuthToken(token);
         const me = await authApi.me();
         setUser(me);
       } catch {
         setAuthToken(null);
-        await SecureStore.deleteItemAsync(TOKEN_KEY).catch(() => {});
+        await deleteToken(TOKEN_KEY).catch(() => {});
       } finally {
         setIsLoading(false);
       }
@@ -52,20 +52,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isLoading,
       async login(email, password) {
         const result = await authApi.login({ email, password });
-        await SecureStore.setItemAsync(TOKEN_KEY, result.token);
+        await setToken(TOKEN_KEY, result.token);
         setAuthToken(result.token);
         setUser(result.user);
       },
       async signup(username, email, password, displayName) {
         const result = await authApi.signup({ username, email, password, displayName });
-        await SecureStore.setItemAsync(TOKEN_KEY, result.token);
+        await setToken(TOKEN_KEY, result.token);
         setAuthToken(result.token);
         setUser(result.user);
       },
       async logout() {
         setAuthToken(null);
         setUser(null);
-        await SecureStore.deleteItemAsync(TOKEN_KEY).catch(() => {});
+        await deleteToken(TOKEN_KEY).catch(() => {});
       },
     }),
     [user, isLoading]

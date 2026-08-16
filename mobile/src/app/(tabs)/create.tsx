@@ -35,7 +35,7 @@ export default function CreatePostScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <SafeAreaView style={styles.safeArea} edges={["left", "right"]}>
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.flex}>
           <View style={styles.content}>
             <TextInput
@@ -44,7 +44,10 @@ export default function CreatePostScreen() {
               multiline
               value={content}
               onChangeText={setContent}
-              style={[styles.input, { color: theme.text, borderColor: theme.border }]}
+              style={[
+                styles.input,
+                { color: theme.text, borderColor: theme.border, backgroundColor: theme.backgroundElement },
+              ]}
               textAlignVertical="top"
             />
             <View style={styles.footer}>
@@ -81,7 +84,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     borderWidth: 1,
-    borderRadius: Spacing.two,
+    borderRadius: Spacing.three,
     padding: Spacing.three,
     fontSize: 16,
     minHeight: 160,
@@ -89,7 +92,7 @@ const styles = StyleSheet.create({
   footer: { alignItems: "flex-end", marginTop: Spacing.one },
   error: { textAlign: "center", marginTop: Spacing.two },
   button: {
-    borderRadius: Spacing.two,
+    borderRadius: Spacing.three,
     paddingVertical: Spacing.three,
     alignItems: "center",
     marginTop: Spacing.three,

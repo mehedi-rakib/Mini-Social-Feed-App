@@ -1,9 +1,9 @@
 import { apiRequest } from "./client";
 
-export function registerDevice(token: string) {
+export function registerDevice(token: string, platform: string) {
   return apiRequest<{ registered: boolean }>("/api/devices", {
     method: "POST",
-    body: { token, platform: "ANDROID" },
+    body: { token, platform },
   }).then((r) => r.data);
 }
 

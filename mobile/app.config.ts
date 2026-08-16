@@ -1,19 +1,17 @@
 import type { ExpoConfig } from "expo/config";
 
 // Never hardcode the API URL in app code - it's injected here from env so a
-// single build-time value can be swapped without touching source. Falls back
-// to the dev machine's LAN IP (not localhost - a physical device can't reach
-// the host's 127.0.0.1) for local testing against `npm run dev` in backend/.
-// Replace with the live Vercel URL before producing the release APK.
-const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? "http://192.168.0.107:4000";
+// single build-time value can be swapped without touching source. Set in
+// mobile/.env; defaults to the live backend at pricing.mehedirakib.com.
+const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? "https://pricing.mehedirakib.com";
 
 const config: ExpoConfig = {
-  name: "mobile",
-  slug: "mobile",
+  name: "Mini Social Feed",
+  slug: "mini-social-feed",
   version: "1.0.0",
   orientation: "portrait",
   icon: "./assets/images/icon.png",
-  scheme: "mobile",
+  scheme: "mini-social-feed",
   userInterfaceStyle: "automatic",
   ios: {
     icon: "./assets/expo.icon",
