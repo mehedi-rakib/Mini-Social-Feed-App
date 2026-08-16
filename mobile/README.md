@@ -1,56 +1,100 @@
-# Welcome to your Expo app 👋
+# Mini Social Feed — Mobile
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+React Native (Expo SDK 57) app: login/signup, a scrollable feed with
+like/comment and a username filter, a create-post screen, and push
+notifications for likes/comments on your posts via Firebase Cloud Messaging.
 
-## Get started
+> **Push notifications do not work in Expo Go.** This app uses
+> `expo-notifications` with native FCM tokens, which requires a custom dev
+> client (or a full release build) on a physical Android device with Google
+> Play Services.
 
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## 1. Install dependencies
 
 ```bash
-npm run reset-project
+cd mobile
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## 2. Point the app at a backend
 
-### Other setup steps
+Create `mobile/.env`:
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+```bash
+EXPO_PUBLIC_API_URL=https://pricing.mehedirakib.com
+```
 
-## Learn more
+To run against a local backend instead, use your machine's LAN IP (not
+`localhost` — a physical device or emulator can't reach the host's
+`127.0.0.1`), e.g. `EXPO_PUBLIC_API_URL=http://192.168.x.x:4000`. See
+[`../backend/README.md`](../backend/README.md) to run the backend locally.
 
-To learn more about developing your project with Expo, look at the following resources:
+## 3. Add Firebase config
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+Download `google-services.json` for the Android app (package name
+`com.mehedirakib.minifeed`) from Firebase Console → Project settings → Your
+apps, and place it at `mobile/google-services.json`. It's gitignored and
+never committed.
 
-## Join the community
+## 4. Run a dev build
 
-Join our community of developers creating universal apps.
+Because of the native modules in use (`expo-notifications`,
+`expo-dev-client`, `expo-glass-effect`), this project needs a custom
+development client — plain Expo Go will not load it.
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```bash
+npm run android   # expo run:android — builds and installs a dev client on a connected device/emulator
+npm run ios       # expo run:ios     — requires Xcode + CocoaPods installed
+```
+
+First run builds the native project (`android/`, `ios/` — both gitignored,
+regenerated on demand) and can take a few minutes. Subsequent runs reuse the
+installed dev client and just start Metro:
+
+```bash
+npm start
+```
+
+Push notifications additionally require:
+- a **physical Android device** with Google Play Services (emulators without
+  Play Services can't receive FCM; the iOS Simulator can never receive push
+  at all)
+- notification permission granted when prompted after login
+
+## 5. Build a release APK
+
+With the native `android/` project generated (step 4 above has already run
+`expo run:android` once), either:
+
+```bash
+cd android
+./gradlew assembleRelease
+```
+
+which writes the APK to `android/app/build/outputs/apk/release/` (requires a
+release signing config), or build/export it from Android Studio, or via
+`eas build -p android --profile preview` if using EAS Build instead. Install
+the resulting APK directly on a device, or distribute via a shareable link
+(Google Drive, etc).
+
+## Project structure
+
+```
+src/
+├── app/            expo-router screens: (auth)/, (tabs)/, post/[id]
+├── api/            client.ts (fetch wrapper + envelope handling) + one file per resource
+├── components/     PostCard, auth form pieces, themed primitives
+├── context/         AuthContext — token in SecureStore, restores session on launch
+├── hooks/           usePosts / useComments (TanStack Query, optimistic like), useDebouncedValue
+├── lib/             notifications.ts (permission + token registration + tap-to-navigate)
+└── constants/       theme tokens
+```
+
+## Notes
+
+- Auth token is stored in `expo-secure-store`, attached as `Authorization:
+  Bearer <token>` on every request; a 401 response clears the session and
+  routes back to login.
+- The feed is a tablet-aware layout: content is capped at 600px and centered
+  on wide screens.
+- Like is optimistic — the UI flips immediately and rolls back on error.

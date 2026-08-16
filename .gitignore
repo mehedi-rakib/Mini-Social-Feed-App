@@ -81,3 +81,11 @@ GoogleService-Info.plist
 /mobile/node_modules
 /mobile/.expo
 /backend/node_modules/*
+
+# macOS
+.DS_Store
+
+# internal planning docs - not part of the deliverable
+project_plan.md
+skills-lock.json
+React Native + BE Assesment project.docx.md

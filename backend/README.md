@@ -1,15 +1,19 @@
-# Backend setup
+# Mini Social Feed — Backend
 
-Node 20 + Express 5 + TypeScript + Firestore. This is Firestore, not SQL - there
-are no schema migrations to run against tables. The two things that stand in
-for "migrations" here are:
+Node.js 20 + Express 5 + TypeScript. Data lives in **MySQL via Prisma**;
+**Firebase Admin SDK is used only for push notifications (FCM)** — there is no
+Firestore involved.
 
-- **`firestore.rules`** - access control (deployed to the project)
-- **`firestore.indexes.json`** - composite indexes Firestore needs for the
-  queries this API runs (deployed to the project)
+Live instance: `https://pricing.mehedirakib.com`
 
-The database "schema" (collection shapes) lives in code as the single source
-of truth: [`src/lib/schema.ts`](src/lib/schema.ts).
+## Stack
+
+- Express 5, TypeScript (`NodeNext` modules)
+- Prisma ORM + MySQL
+- JWT auth (`jsonwebtoken` + `bcryptjs`)
+- Zod request validation
+- `firebase-admin` — Cloud Messaging only, for like/comment push notifications
+- `express-rate-limit`, `helmet`, `cors`
 
 ## 1. Install
 
@@ -18,64 +22,172 @@ cd backend
 npm install
 ```
 
-## 2. Get a service account key
+## 2. Configure environment
 
-Firebase Console -> Project settings -> Service accounts -> **Generate new
-private key**. Save the downloaded JSON anywhere (dropping it in this
-`backend/` folder is fine - it's gitignored by filename pattern
-`*firebase-adminsdk*.json`). **Never commit this file.**
-
-## 3. Generate `.env`
+Copy the example file and fill in the values:
 
 ```bash
-npm run db:env -- ./path/to/your-serviceAccountKey.json
-# or, if the file is sitting in backend/ already:
-npm run db:env
+cp .env.example .env
 ```
 
-This writes `backend/.env` with `FIREBASE_SERVICE_ACCOUNT_B64` (the key,
-base64-encoded) plus a generated `JWT_SECRET`, `JWT_EXPIRES_IN`, `NODE_ENV`,
-`PORT`. `.env` is gitignored - it's never committed either.
+| Variable | Description |
+|---|---|
+| `DATABASE_URL` | MySQL connection string, e.g. `mysql://USER:PASSWORD@localhost:3306/mini_social` |
+| `FIREBASE_SERVICE_ACCOUNT_B64` | Base64-encoded Firebase service account JSON (FCM only — see below) |
+| `JWT_SECRET` | Random secret used to sign auth tokens |
+| `JWT_EXPIRES_IN` | Token lifetime, e.g. `7d` |
+| `NODE_ENV` | `development` \| `production` \| `test` |
+| `PORT` | Port for local dev (default `4000`) |
 
-## 4. Deploy rules + indexes ("migrate")
-
-Requires being logged into the Firebase account that owns the project:
+**Getting `FIREBASE_SERVICE_ACCOUNT_B64`:** Firebase Console → Project settings
+→ Service accounts → **Generate new private key**, then base64-encode the
+downloaded JSON:
 
 ```bash
-npx firebase-tools login
-npm run db:migrate
+npm run db:env -- ./path/to/serviceAccountKey.json
 ```
 
-This runs `firebase deploy --only firestore:rules,firestore:indexes` against
-the project set in the repo root's `.firebaserc`. Index builds can take a few
-minutes on a fresh project.
+This writes `FIREBASE_SERVICE_ACCOUNT_B64` into `backend/.env` (creating it if
+needed) and fills in a generated `JWT_SECRET` plus sane defaults for the rest.
+It leaves `DATABASE_URL` as a placeholder for you to fill in with your real
+MySQL connection string. **Never commit the service account JSON or `.env`** —
+both are gitignored.
 
-## 5. Seed demo data
+## 3. Set up the database
 
 ```bash
-npm run db:seed
+npm run db:migrate:deploy   # apply Prisma migrations
+npm run db:seed             # optional: demo accounts + sample posts
 ```
 
-Creates `demo1` / `demo2` (password `Password123!`) and 5 sample posts. Safe
-to re-run - it skips users that already exist.
+Demo accounts created by the seed script: `demo1` / `demo2`, password
+`Password123!`.
 
-## 6. Run it
+For local development iteration (creates new migrations from schema changes):
 
 ```bash
-npm run dev        # local dev, http://localhost:4000
-npm run build       # compile to dist/
-npm start           # run compiled output
+npm run db:migrate          # prisma migrate dev
+```
+
+## 4. Run it
+
+```bash
+npm run dev      # local dev with hot reload, http://localhost:4000
+npm run build     # compile to dist/
+npm start         # run compiled output
 ```
 
 `GET /health` should return `{ "success": true, "data": { "status": "ok" } }`.
 
-## One-liner after step 1-2
+## One-liner after steps 1–2
 
 ```bash
-npm run db:env && npm run db:migrate && npm run db:seed && npm run dev
+npm run db:migrate:deploy && npm run db:seed && npm run dev
 ```
+
+---
 
 ## API
 
-See [`../project_plan.md`](../project_plan.md) §6 for the full endpoint
-table and response shapes.
+Base URL (local): `http://localhost:4000`
+Base URL (live): `https://pricing.mehedirakib.com`
+
+All authenticated routes require `Authorization: Bearer <token>`.
+
+### Response envelope
+
+Every response follows the same shape:
+
+```jsonc
+// success
+{ "success": true, "data": { ... }, "meta": { ... } }   // meta only on paginated endpoints
+
+// error
+{ "success": false, "error": { "code": "VALIDATION_ERROR", "message": "...", "details": [...] } }
+```
+
+| Error code | HTTP status |
+|---|---|
+| `VALIDATION_ERROR` | 400 |
+| `UNAUTHORIZED` | 401 |
+| `FORBIDDEN` | 403 |
+| `NOT_FOUND` | 404 |
+| `CONFLICT` | 409 |
+| `RATE_LIMITED` | 429 |
+| `INTERNAL` | 500 |
+
+### Endpoints
+
+| Method | Path | Auth | Body / Query |
+|---|---|---|---|
+| GET | `/health` | – | – |
+| POST | `/api/auth/signup` | – | `{ username, email, password, displayName? }` |
+| POST | `/api/auth/login` | – | `{ email, password }` |
+| GET | `/api/auth/me` | ✔ | – |
+| GET | `/api/posts` | ✔ | `?limit=10&cursor=<postId>&username=<name>` |
+| POST | `/api/posts` | ✔ | `{ content }` |
+| GET | `/api/posts/:id` | ✔ | – |
+| POST | `/api/posts/:id/like` | ✔ | – (toggles like/unlike) |
+| POST | `/api/posts/:id/comment` | ✔ | `{ content }` |
+| GET | `/api/posts/:id/comments` | ✔ | `?limit=20&cursor=<commentId>` |
+| POST | `/api/devices` | ✔ | `{ token, platform?: "ANDROID" }` — register an FCM push token |
+| DELETE | `/api/devices` | ✔ | `{ token }` — call on logout |
+
+**Validation:**
+- `username`: 3–20 chars, letters/numbers/underscore only
+- `password`: min 8 chars
+- post `content`: 1–500 chars, trimmed
+- comment `content`: 1–1000 chars, trimmed
+- `limit` on `/api/posts`: 1–20 (default 10); on `/api/posts/:id/comments`: 1–50 (default 20)
+
+### Sample requests/responses
+
+```jsonc
+// POST /api/auth/signup
+// body: { "username": "rakib", "email": "rakib@example.com", "password": "Password123!" }
+{ "success": true, "data": {
+    "token": "eyJ...",
+    "user": { "id": "...", "username": "rakib", "email": "rakib@example.com", "displayName": "rakib" }
+}}
+
+// GET /api/posts?limit=10
+{ "success": true,
+  "data": [{
+    "id": "...", "content": "Hello world",
+    "author": { "id": "...", "username": "demo1" },
+    "likeCount": 3, "commentCount": 1,
+    "likedByMe": true,
+    "createdAt": "2026-08-15T10:00:00.000Z"
+  }],
+  "meta": { "nextCursor": "postId_or_null", "hasMore": true }
+}
+
+// POST /api/posts/:id/like
+{ "success": true, "data": { "liked": true, "likeCount": 4 } }
+```
+
+### Notifications (FCM)
+
+Liking or commenting on someone else's post triggers a push notification to
+every FCM token registered on the post author's account (via `POST
+/api/devices`). A user never gets notified for their own like/comment. Push
+is fired after the response is sent and never blocks or fails the API call —
+delivery errors are logged, and tokens Firebase reports as
+`registration-token-not-registered` are pruned automatically.
+
+---
+
+## Design notes
+
+- **Cursor pagination**: `cursor` is the last item's `id` from the previous
+  page; `hasMore`/`nextCursor` come back in `meta`.
+- **Rate limiting**: global `/api` limiter (300 req/15min), tighter limits on
+  `/api/auth/signup` (10/hr/IP), `/api/auth/login` (5/15min/IP), and writes
+  — post/like/comment/device — (20/min, per user once authenticated). Note:
+  the in-memory store is per-instance, so on a multi-instance deployment this
+  is a best-effort defense rather than a hard guarantee.
+- **Auth**: same generic "Invalid email or password" message on wrong email
+  vs. wrong password, to avoid user enumeration.
+- **Modules**: each domain (`auth`, `posts`, `likes`, `comments`, `devices`,
+  `notifications`) has `.routes.ts` / `.controller.ts` / `.service.ts` /
+  `.schema.ts`. Controllers stay thin; all data access lives in services.
