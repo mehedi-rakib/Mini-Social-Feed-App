@@ -18,7 +18,10 @@ let tokenSubscription: Notifications.Subscription | null = null;
 let responseSubscription: Notifications.Subscription | null = null;
 
 export async function setupPushNotifications(): Promise<void> {
-  if (!Device.isDevice) {
+  // iOS simulators can never receive real push, so skip there. Android
+  // emulators with Google Play Services *can* receive FCM, so only iOS
+  // is gated on Device.isDevice.
+  if (Platform.OS === "ios" && !Device.isDevice) {
     console.warn("Push notifications require a physical device.");
     return;
   }
@@ -58,7 +61,11 @@ export async function setupPushNotifications(): Promise<void> {
     const { data: token } = await Notifications.getDevicePushTokenAsync();
     currentToken = token;
     const platform = Platform.OS.toUpperCase();
-    await devicesApi.registerDevice(token, platform).catch((err) => console.error("registerDevice failed:", err));
+    console.log("Device push token:", token);
+    await devicesApi
+      .registerDevice(token, platform)
+      .then(() => console.log("registerDevice succeeded"))
+      .catch((err) => console.error("registerDevice failed:", err));
 
     tokenSubscription = Notifications.addPushTokenListener(async (newToken) => {
       currentToken = newToken.data;
