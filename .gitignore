@@ -77,6 +77,8 @@ GoogleService-Info.plist
 .dataconnect
 .agents
 .claude
+AGENTS.md
+CLAUDE.md
 /backend/node_modules
 /mobile/node_modules
 /mobile/.expo

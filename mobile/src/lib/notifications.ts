@@ -41,18 +41,24 @@ export async function setupPushNotifications(): Promise<void> {
 
   // Use granular iOS status if available
   if (Platform.OS === "ios" && existing.ios) {
-    status = existing.ios.status === Notifications.IosAuthorizationStatus.AUTHORIZED ? "granted" : "denied";
+    status =
+      existing.ios.status === Notifications.IosAuthorizationStatus.AUTHORIZED
+        ? Notifications.PermissionStatus.GRANTED
+        : Notifications.PermissionStatus.DENIED;
   }
 
-  if (status !== "granted") {
+  if (status !== Notifications.PermissionStatus.GRANTED) {
     const requested = await Notifications.requestPermissionsAsync();
     status = requested.status;
     if (Platform.OS === "ios" && requested.ios) {
-      status = requested.ios.status === Notifications.IosAuthorizationStatus.AUTHORIZED ? "granted" : "denied";
+      status =
+        requested.ios.status === Notifications.IosAuthorizationStatus.AUTHORIZED
+          ? Notifications.PermissionStatus.GRANTED
+          : Notifications.PermissionStatus.DENIED;
     }
   }
 
-  if (status !== "granted") {
+  if (status !== Notifications.PermissionStatus.GRANTED) {
     console.warn("Push notification permission not granted.");
     return;
   }
@@ -61,11 +67,7 @@ export async function setupPushNotifications(): Promise<void> {
     const { data: token } = await Notifications.getDevicePushTokenAsync();
     currentToken = token;
     const platform = Platform.OS.toUpperCase();
-    console.log("Device push token:", token);
-    await devicesApi
-      .registerDevice(token, platform)
-      .then(() => console.log("registerDevice succeeded"))
-      .catch((err) => console.error("registerDevice failed:", err));
+    await devicesApi.registerDevice(token, platform).catch((err) => console.error("registerDevice failed:", err));
 
     tokenSubscription = Notifications.addPushTokenListener(async (newToken) => {
       currentToken = newToken.data;
