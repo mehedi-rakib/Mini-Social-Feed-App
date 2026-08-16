@@ -41,7 +41,7 @@ export async function notify(input: NotifyInput): Promise<void> {
     tokens,
     notification: { title, body },
     data: { type: input.type, postId: input.postId },
-    android: { priority: "high" },
+    android: { priority: "high", notification: { channelId: "default" } },
   });
 
   const staleTokens: string[] = [];
