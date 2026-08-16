@@ -51,7 +51,7 @@ async function main() {
   }
 
   console.log("Seed complete. Demo accounts:");
-  console.log("  demo1 / demo2  password: Password123!");
+  console.log("  demo1@example.com / demo2@example.com  password: Password123!");
 }
 
 main()

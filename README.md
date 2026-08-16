@@ -15,7 +15,7 @@ notification when someone likes or comments on your post.
 |---|---|
 | Live API | `https://pricing.mehedirakib.com` |
 | Android APK | https://drive.google.com/drive/folders/1XCJXZns5o5ioNKWKgTa5Dhc3Q54lZW73?usp=sharing |
-| Demo accounts | `demo1` / `demo2` — password `Password123!` |
+| Demo accounts | `demo1@example.com` / `demo2@example.com` — password `Password123!` |
 
 
 ## Quick start
@@ -61,6 +61,10 @@ npm run android   # builds and installs a dev client — plain Expo Go can't loa
   (with retry) states, not just a spinner.
 
 ## Requirements coverage
+
+All endpoints below are mounted under `/api` (e.g. `POST /api/posts/:id/like`
+for the spec's `POST /posts/:id/like`) — see
+[`backend/README.md`](backend/README.md#api) for exact paths.
 
 | Requirement | Status |
 |---|---|

@@ -44,7 +44,3 @@ example
 
 # IDE
 .idea/
-
-# AI assistant config
-AGENTS.md
-CLAUDE.md
