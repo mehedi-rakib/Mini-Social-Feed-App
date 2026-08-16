@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { PostCard } from "@/components/PostCard";
@@ -27,23 +28,36 @@ export default function FeedScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <SafeAreaView style={styles.safeArea} edges={["left", "right"]}>
         <View style={styles.centeredContent}>
-          <TextInput
-            placeholder="Filter by username"
-            placeholderTextColor={theme.textSecondary}
-            autoCapitalize="none"
-            value={search}
-            onChangeText={setSearch}
-            style={[styles.search, { color: theme.text, borderColor: theme.border }]}
-          />
+          <View
+            style={[
+              styles.searchWrapper,
+              { backgroundColor: theme.backgroundElement, borderColor: theme.border },
+            ]}
+          >
+            <Ionicons name="search" size={18} color={theme.textSecondary} />
+            <TextInput
+              placeholder="Search by username"
+              placeholderTextColor={theme.textSecondary}
+              autoCapitalize="none"
+              value={search}
+              onChangeText={setSearch}
+              style={[styles.searchInput, { color: theme.text }]}
+            />
+            {search.length > 0 && (
+              <Pressable onPress={() => setSearch("")} hitSlop={8}>
+                <Ionicons name="close-circle" size={18} color={theme.textSecondary} />
+              </Pressable>
+            )}
+          </View>
 
           {isLoading ? (
             <SkeletonList />
           ) : isError ? (
             <View style={styles.centerBox}>
               <ThemedText themeColor="textSecondary" style={styles.centerText}>
-                Couldn&apos;t load the feed.
+                Could not load the feed.
               </ThemedText>
               <Pressable
                 onPress={() => refetch()}
@@ -98,20 +112,24 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   safeArea: { flex: 1 },
   centeredContent: { flex: 1, width: "100%", maxWidth: CONTENT_MAX_WIDTH, alignSelf: "center" },
-  search: {
+  searchWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.two,
+    marginTop: Spacing.three,
     marginHorizontal: Spacing.three,
     marginBottom: Spacing.two,
     borderWidth: 1,
-    borderRadius: Spacing.two,
+    borderRadius: Spacing.three,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
-    fontSize: 15,
   },
+  searchInput: { flex: 1, fontSize: 15, paddingVertical: 0 },
   listContent: { paddingHorizontal: Spacing.three, paddingBottom: Spacing.five },
   footerLoader: { marginVertical: Spacing.three },
   centerBox: { flex: 1, alignItems: "center", justifyContent: "center", gap: Spacing.three, padding: Spacing.four },
   centerText: { textAlign: "center" },
-  retryButton: { paddingHorizontal: Spacing.four, paddingVertical: Spacing.two, borderRadius: Spacing.two },
+  retryButton: { paddingHorizontal: Spacing.four, paddingVertical: Spacing.two, borderRadius: Spacing.three },
   retryText: { color: "#ffffff", fontWeight: "600" },
   skeletonCard: { height: 96, borderRadius: Spacing.three },
 });

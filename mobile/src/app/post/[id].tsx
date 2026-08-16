@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, useLocalSearchParams } from "expo-router";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useTheme } from "@/hooks/use-theme";
@@ -95,18 +96,31 @@ export default function PostDetailScreen() {
             )}
 
             <View style={[styles.composer, { borderColor: theme.border }]}>
-              <TextInput
-                placeholder="Add a comment..."
-                placeholderTextColor={theme.textSecondary}
-                value={text}
-                onChangeText={setText}
-                style={[styles.composerInput, { color: theme.text }]}
-                multiline
-              />
-              <Pressable onPress={onSend} disabled={!text.trim() || addComment.isPending} hitSlop={8}>
-                <ThemedText themeColor={text.trim() ? "primary" : "textSecondary"} type="smallBold">
-                  Send
-                </ThemedText>
+              <View
+                style={[
+                  styles.composerInputWrapper,
+                  { backgroundColor: theme.backgroundElement, borderColor: theme.border },
+                ]}
+              >
+                <TextInput
+                  placeholder="Add a comment..."
+                  placeholderTextColor={theme.textSecondary}
+                  value={text}
+                  onChangeText={setText}
+                  style={[styles.composerInput, { color: theme.text }]}
+                  multiline
+                />
+              </View>
+              <Pressable
+                onPress={onSend}
+                disabled={!text.trim() || addComment.isPending}
+                hitSlop={8}
+                style={[
+                  styles.sendButton,
+                  { backgroundColor: text.trim() ? theme.primary : theme.backgroundElement },
+                ]}
+              >
+                <Ionicons name="arrow-up" size={18} color={text.trim() ? "#ffffff" : theme.textSecondary} />
               </Pressable>
             </View>
             {error && (
@@ -141,6 +155,21 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     padding: Spacing.three,
   },
-  composerInput: { flex: 1, fontSize: 15, maxHeight: 100 },
+  composerInputWrapper: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: Spacing.three,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    maxHeight: 120,
+  },
+  composerInput: { fontSize: 15 },
+  sendButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   composerError: { textAlign: "center", paddingBottom: Spacing.two },
 });

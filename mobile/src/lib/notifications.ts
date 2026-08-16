@@ -6,7 +6,6 @@ import * as devicesApi from "@/api/devices";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
     shouldShowBanner: true,
@@ -15,12 +14,17 @@ Notifications.setNotificationHandler({
 });
 
 let currentToken: string | null = null;
+let tokenSubscription: Notifications.Subscription | null = null;
+let responseSubscription: Notifications.Subscription | null = null;
 
 export async function setupPushNotifications(): Promise<void> {
   if (!Device.isDevice) {
     console.warn("Push notifications require a physical device.");
     return;
   }
+
+  // Clear existing listeners if any (safety against multiple calls)
+  removeListeners();
 
   if (Platform.OS === "android") {
     await Notifications.setNotificationChannelAsync("default", {
@@ -31,33 +35,60 @@ export async function setupPushNotifications(): Promise<void> {
 
   const existing = await Notifications.getPermissionsAsync();
   let status = existing.status;
+
+  // Use granular iOS status if available
+  if (Platform.OS === "ios" && existing.ios) {
+    status = existing.ios.status === Notifications.IosAuthorizationStatus.AUTHORIZED ? "granted" : "denied";
+  }
+
   if (status !== "granted") {
     const requested = await Notifications.requestPermissionsAsync();
     status = requested.status;
+    if (Platform.OS === "ios" && requested.ios) {
+      status = requested.ios.status === Notifications.IosAuthorizationStatus.AUTHORIZED ? "granted" : "denied";
+    }
   }
+
   if (status !== "granted") {
     console.warn("Push notification permission not granted.");
     return;
   }
 
-  const { data: token } = await Notifications.getDevicePushTokenAsync();
-  currentToken = token;
-  await devicesApi.registerDevice(token).catch((err) => console.error("registerDevice failed:", err));
+  try {
+    const { data: token } = await Notifications.getDevicePushTokenAsync();
+    currentToken = token;
+    const platform = Platform.OS.toUpperCase();
+    await devicesApi.registerDevice(token, platform).catch((err) => console.error("registerDevice failed:", err));
 
-  Notifications.addPushTokenListener(async (newToken) => {
-    currentToken = newToken.data;
-    await devicesApi.registerDevice(newToken.data).catch((err) => console.error("registerDevice failed:", err));
-  });
+    tokenSubscription = Notifications.addPushTokenListener(async (newToken) => {
+      currentToken = newToken.data;
+      await devicesApi.registerDevice(newToken.data, platform).catch((err) => console.error("registerDevice failed:", err));
+    });
 
-  Notifications.addNotificationResponseReceivedListener((response) => {
-    const postId = response.notification.request.content.data?.postId as string | undefined;
-    if (postId) {
-      router.push(`/post/${postId}`);
-    }
-  });
+    responseSubscription = Notifications.addNotificationResponseReceivedListener((response) => {
+      const postId = response.notification.request.content.data?.postId as string | undefined;
+      if (postId) {
+        router.push(`/post/${postId}`);
+      }
+    });
+  } catch (error) {
+    console.error("Failed to setup push notifications:", error);
+  }
+}
+
+function removeListeners() {
+  if (tokenSubscription) {
+    tokenSubscription.remove();
+    tokenSubscription = null;
+  }
+  if (responseSubscription) {
+    responseSubscription.remove();
+    responseSubscription = null;
+  }
 }
 
 export async function teardownPushNotifications(): Promise<void> {
+  removeListeners();
   if (currentToken) {
     await devicesApi.unregisterDevice(currentToken).catch((err) => console.error("unregisterDevice failed:", err));
     currentToken = null;
