@@ -42,5 +42,9 @@ example
 /ios
 /android
 
+# build artifacts
+*.apk
+*.aab
+
 # IDE
 .idea/
