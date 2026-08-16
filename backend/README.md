@@ -60,8 +60,9 @@ npm run db:migrate:deploy   # apply Prisma migrations
 npm run db:seed             # optional: demo accounts + sample posts
 ```
 
-Demo accounts created by the seed script: `demo1` / `demo2`, password
-`Password123!`.
+Demo accounts created by the seed script: `demo1@example.com` /
+`demo2@example.com`, password `Password123!`. Login is by email, not
+username.
 
 For local development iteration (creates new migrations from schema changes):
 

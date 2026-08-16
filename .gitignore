@@ -77,8 +77,6 @@ GoogleService-Info.plist
 .dataconnect
 .agents
 .claude
-AGENTS.md
-CLAUDE.md
 /backend/node_modules
 /mobile/node_modules
 /mobile/.expo
@@ -86,8 +84,4 @@ CLAUDE.md
 
 # macOS
 .DS_Store
-
-# internal planning docs - not part of the deliverable
-project_plan.md
 skills-lock.json
-React Native + BE Assesment project.docx.md
