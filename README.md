@@ -65,17 +65,3 @@ npm run android   # builds and installs a dev client — plain Expo Go can't loa
 All endpoints below are mounted under `/api` (e.g. `POST /api/posts/:id/like`
 for the spec's `POST /posts/:id/like`) — see
 [`backend/README.md`](backend/README.md#api) for exact paths.
-
-| Requirement | Status |
-|---|---|
-| Signup/Login with JWT | ✅ |
-| Create post (text, 1–500 chars) | ✅ |
-| Feed, paginated, newest first | ✅ |
-| Like / unlike | ✅ |
-| Comment | ✅ |
-| Filter feed by username | ✅ |
-| Push notification on like/comment via FCM | ✅ |
-| Login & Signup screens | ✅ |
-| Feed with like + comment + username filter | ✅ |
-| Create-post form | ✅ |
-| Push notifications on mobile | ✅ |
