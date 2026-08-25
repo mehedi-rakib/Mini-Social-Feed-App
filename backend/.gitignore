@@ -1,5 +1,9 @@
 node_modules/
 dist/
+
+# Uploaded user content - not part of the repo, lives on the server
+uploads/*
+!uploads/.gitkeep
 .env
 .env.*
 !.env.example

@@ -1,25 +1,34 @@
 import { useState } from "react";
-import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View } from "react-native";
+import { ActivityIndicator, FlatList, Platform, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Stack, useLocalSearchParams } from "expo-router";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { Image } from "expo-image";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { Avatar } from "@/components/Avatar";
+import { KeyboardAvoidingScreen } from "@/components/KeyboardAvoidingScreen";
 import { useTheme } from "@/hooks/use-theme";
+import { useAuth } from "@/context/AuthContext";
 import { usePost, useToggleLike } from "@/hooks/usePosts";
 import { useComments, useAddComment } from "@/hooks/useComments";
-import { Spacing } from "@/constants/theme";
+import { useStartConversation } from "@/hooks/useChat";
+import { resolveMediaUrl, ApiClientError } from "@/api/client";
+import { CardShadow, Spacing } from "@/constants/theme";
 import { formatRelativeTime } from "@/lib/time";
-import { ApiClientError } from "@/api/client";
+import type { Comment } from "@/api/types";
 
 export default function PostDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const theme = useTheme();
+  const router = useRouter();
+  const { user } = useAuth();
 
   const postQuery = usePost(id);
   const commentsQuery = useComments(id);
   const toggleLike = useToggleLike();
   const addComment = useAddComment(id);
+  const startConversation = useStartConversation();
 
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -36,15 +45,17 @@ export default function PostDetailScreen() {
     }
   }
 
+  function onMessage(userId: string) {
+    startConversation.mutate(userId, {
+      onSuccess: (conversation) => router.push(`/chat/${conversation.id}`),
+    });
+  }
+
   return (
     <ThemedView style={styles.container}>
       <Stack.Screen options={{ title: "Post" }} />
       <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          style={styles.flex}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
-        >
+        <KeyboardAvoidingScreen style={styles.flex} keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}>
           <View style={styles.centeredContent}>
             {postQuery.isLoading ? (
               <ActivityIndicator style={styles.loader} />
@@ -54,14 +65,32 @@ export default function PostDetailScreen() {
                 keyExtractor={(item) => item.id}
                 contentContainerStyle={styles.listContent}
                 ListHeaderComponent={
-                  <ThemedView type="backgroundElement" style={styles.postCard}>
+                  <ThemedView type="backgroundElement" style={[styles.postCard, CardShadow]}>
                     <View style={styles.headerRow}>
-                      <ThemedText type="smallBold">@{postQuery.data.author.username}</ThemedText>
-                      <ThemedText type="small" themeColor="textSecondary">
-                        {formatRelativeTime(postQuery.data.createdAt)}
-                      </ThemedText>
+                      <View style={styles.headerLeft}>
+                        <Avatar username={postQuery.data.author.username} />
+                        <View>
+                          <ThemedText type="smallBold">@{postQuery.data.author.username}</ThemedText>
+                          <ThemedText type="small" themeColor="textSecondary">
+                            {formatRelativeTime(postQuery.data.createdAt)}
+                          </ThemedText>
+                        </View>
+                      </View>
+                      {user?.id !== postQuery.data.author.id && (
+                        <Pressable onPress={() => onMessage(postQuery.data!.author.id)} hitSlop={10}>
+                          <Ionicons name="chatbubble-outline" size={18} color={theme.textSecondary} />
+                        </Pressable>
+                      )}
                     </View>
                     <ThemedText style={styles.postContent}>{postQuery.data.content}</ThemedText>
+                    {postQuery.data.imageUrl && (
+                      <Image
+                        source={{ uri: resolveMediaUrl(postQuery.data.imageUrl) }}
+                        style={styles.postImage}
+                        contentFit="cover"
+                        transition={150}
+                      />
+                    )}
                     <Pressable
                       style={styles.likeRow}
                       onPress={() => toggleLike.mutate(postQuery.data!.id)}
@@ -74,13 +103,23 @@ export default function PostDetailScreen() {
                     </Pressable>
                   </ThemedView>
                 }
-                renderItem={({ item }) => (
+                renderItem={({ item }: { item: Comment }) => (
                   <View style={styles.commentRow}>
-                    <ThemedText type="smallBold">@{item.user.username}</ThemedText>
-                    <ThemedText>{item.content}</ThemedText>
-                    <ThemedText type="small" themeColor="textSecondary">
-                      {formatRelativeTime(item.createdAt)}
-                    </ThemedText>
+                    <Avatar username={item.user.username} size={28} />
+                    <View style={styles.commentBody}>
+                      <View style={styles.commentHeaderRow}>
+                        <ThemedText type="smallBold">@{item.user.username}</ThemedText>
+                        {user?.id !== item.user.id && (
+                          <Pressable onPress={() => onMessage(item.user.id)} hitSlop={10}>
+                            <Ionicons name="chatbubble-outline" size={15} color={theme.textSecondary} />
+                          </Pressable>
+                        )}
+                      </View>
+                      <ThemedText>{item.content}</ThemedText>
+                      <ThemedText type="small" themeColor="textSecondary">
+                        {formatRelativeTime(item.createdAt)}
+                      </ThemedText>
+                    </View>
                   </View>
                 )}
                 ListEmptyComponent={
@@ -129,7 +168,7 @@ export default function PostDetailScreen() {
               </ThemedText>
             )}
           </View>
-        </KeyboardAvoidingView>
+        </KeyboardAvoidingScreen>
       </SafeAreaView>
     </ThemedView>
   );
@@ -143,10 +182,14 @@ const styles = StyleSheet.create({
   loader: { marginTop: Spacing.five, textAlign: "center" },
   listContent: { padding: Spacing.three, gap: Spacing.three },
   postCard: { borderRadius: Spacing.three, padding: Spacing.three, gap: Spacing.two },
-  headerRow: { flexDirection: "row", justifyContent: "space-between" },
+  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  headerLeft: { flexDirection: "row", alignItems: "center", gap: Spacing.two },
   postContent: { fontSize: 17 },
+  postImage: { width: "100%", aspectRatio: 4 / 3, borderRadius: Spacing.two },
   likeRow: { marginTop: Spacing.one },
-  commentRow: { paddingVertical: Spacing.two, gap: Spacing.half },
+  commentRow: { flexDirection: "row", gap: Spacing.two, paddingVertical: Spacing.two },
+  commentBody: { flex: 1, gap: Spacing.half },
+  commentHeaderRow: { flexDirection: "row", alignItems: "center", gap: Spacing.two },
   emptyComments: { textAlign: "center", marginTop: Spacing.four },
   composer: {
     flexDirection: "row",

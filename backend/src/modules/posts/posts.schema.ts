@@ -1,7 +1,9 @@
 import { z } from "zod";
+import { isOwnUploadUrl } from "../../lib/upload.js";
 
 export const createPostSchema = z.object({
   content: z.string().trim().min(1, "Content cannot be empty").max(500),
+  imageUrl: z.string().refine(isOwnUploadUrl, "imageUrl must come from POST /api/uploads/image").optional(),
 });
 
 export const listPostsQuerySchema = z.object({

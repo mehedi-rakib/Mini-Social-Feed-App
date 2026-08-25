@@ -1,8 +1,9 @@
-# Mini Social Feed — Mobile
+# Gossip Girls — Mobile
 
 React Native (Expo SDK 57) app: login/signup, a scrollable feed with
-like/comment and a username filter, a create-post screen, and push
-notifications for likes/comments on your posts via Firebase Cloud Messaging.
+like/comment, a create-post screen with optional image attachments, 1:1
+personal chat, and push notifications for likes/comments/messages via
+Firebase Cloud Messaging.
 
 > **Push notifications do not work in Expo Go.** This app uses
 > `expo-notifications` with native FCM tokens, which requires a custom dev
@@ -32,8 +33,8 @@ To run against a local backend instead, use your machine's LAN IP (not
 ## 3. Add Firebase config
 
 Download `google-services.json` for the Android app (package name
-`com.mehedirakib.minifeed`) from Firebase Console → Project settings → Your
-apps, and place it at `mobile/google-services.json`. It's gitignored and
+`com.mehedirakib.gossipgirls`) from Firebase Console → Project settings →
+Your apps, and place it at `mobile/google-services.json`. It's gitignored and
 never committed.
 
 ## 4. Run a dev build
@@ -61,31 +62,45 @@ Push notifications additionally require:
   at all)
 - notification permission granted when prompted after login
 
-## 5. Build a release APK
+## 5. Build a release for the Play Store
+
+Release builds are signed with an upload keystore kept at
+`mobile/credentials/` (gitignored, never committed). It's generated once and
+reused for every future release — losing it means you can't ship an update to
+an already-published app under the same listing, so back up
+`mobile/credentials/` somewhere safe (password manager / private cloud
+storage) outside this repo.
 
 With the native `android/` project generated (step 4 above has already run
-`expo run:android` once), either:
+`expo run:android`/`expo prebuild` once):
 
 ```bash
 cd android
-./gradlew assembleRelease
+./gradlew bundleRelease
 ```
 
-which writes the APK to `android/app/build/outputs/apk/release/` (requires a
-release signing config), or build/export it from Android Studio, or via
-`eas build -p android --profile preview` if using EAS Build instead. Install
-the resulting APK directly on a device, or distribute via a shareable link
-(Google Drive, etc).
+writes the signed `.aab` to `android/app/build/outputs/bundle/release/` —
+this is the file Play Console expects for a new upload. `./gradlew
+assembleRelease` produces a signed `.apk` under
+`android/app/build/outputs/apk/release/` instead, for direct sideload
+testing.
+
+`android/` is regenerated from scratch by `expo prebuild --clean`, which
+wipes the manual signing config wired into `android/app/build.gradle`
+(`signingConfigs.release`, reading from `credentials/keystore.properties`).
+If you run a clean prebuild, re-add that block before building release — see
+the `signingConfigs` block in `android/app/build.gradle` in the last release
+build for reference.
 
 ## Project structure
 
 ```
 src/
-├── app/            expo-router screens: (auth)/, (tabs)/, post/[id]
+├── app/            expo-router screens: (auth)/, (tabs)/ (incl. chat list), post/[id], chat/[id]
 ├── api/            client.ts (fetch wrapper + envelope handling) + one file per resource
-├── components/     PostCard, auth form pieces, themed primitives
+├── components/     PostCard, Avatar, auth form pieces, themed primitives
 ├── context/         AuthContext — token in SecureStore, restores session on launch
-├── hooks/           usePosts / useComments (TanStack Query, optimistic like), useDebouncedValue
+├── hooks/           usePosts / useComments / useChat (TanStack Query, optimistic updates), useImagePicker
 ├── lib/             notifications.ts (permission + token registration + tap-to-navigate)
 └── constants/       theme tokens
 ```
@@ -97,4 +112,20 @@ src/
   routes back to login.
 - The feed is a tablet-aware layout: content is capped at 600px and centered
   on wide screens.
-- Like is optimistic — the UI flips immediately and rolls back on error.
+- Like/comment/message-send are all optimistic — the UI updates immediately
+  and rolls back on error.
+- **Images**: picked via `expo-image-picker`, uploaded to the backend first
+  (`POST /api/uploads/image`), then the returned relative URL is attached to
+  the post/message. `resolveMediaUrl()` in `api/client.ts` resolves that
+  relative URL against `EXPO_PUBLIC_API_URL` when rendering.
+- **Chat**: no WebSocket — the conversation list and open thread poll on a
+  short interval (TanStack Query `refetchInterval`), same idea as the rest of
+  the app, plus a push notification (same FCM path as likes/comments) for
+  delivery while the app isn't open. Start a chat from the message icon next
+  to a `@username` on a post, its detail screen, or a comment — there's no
+  separate user-search screen.
+- Android's keyboard used to cover the comment/message input at the bottom of
+  the screen (`KeyboardAvoidingView`'s `behavior` was unset on Android,
+  relying on `windowSoftInputMode="adjustResize"` alone, which doesn't
+  reliably resize content under this SDK's edge-to-edge rendering) — fixed by
+  using `behavior="height"` on Android everywhere there's a composer.

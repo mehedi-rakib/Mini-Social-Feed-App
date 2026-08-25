@@ -6,6 +6,13 @@ if (!API_URL) {
   console.warn("No apiUrl configured in app.config.ts extra - API calls will fail.");
 }
 
+// Uploaded image URLs come back from the API as server-relative paths
+// (e.g. "/uploads/xyz.jpg") so they stay portable across dev/prod hosts -
+// this resolves one against the same configured base the API client uses.
+export function resolveMediaUrl(path: string): string {
+  return new URL(path, API_URL).toString();
+}
+
 export class ApiClientError extends Error {
   code: string;
   status: number;
@@ -43,6 +50,25 @@ interface RequestOptions {
   query?: Record<string, string | number | undefined>;
 }
 
+async function handleResponse<T>(res: Response): Promise<{ data: T; meta?: unknown }> {
+  let json: Envelope<T>;
+  try {
+    json = await res.json();
+  } catch {
+    throw new ApiClientError(res.status, "INTERNAL", "Server returned an invalid response");
+  }
+
+  if (!json.success) {
+    const code = json.error?.code ?? "INTERNAL";
+    if (res.status === 401 && onUnauthorized) {
+      onUnauthorized();
+    }
+    throw new ApiClientError(res.status, code, json.error?.message ?? "Request failed", json.error?.details);
+  }
+
+  return { data: json.data as T, meta: json.meta };
+}
+
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<{ data: T; meta?: unknown }> {
   const url = new URL(path, API_URL);
 
@@ -61,20 +87,22 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
   });
 
-  let json: Envelope<T>;
-  try {
-    json = await res.json();
-  } catch {
-    throw new ApiClientError(res.status, "INTERNAL", "Server returned an invalid response");
-  }
+  return handleResponse<T>(res);
+}
 
-  if (!json.success) {
-    const code = json.error?.code ?? "INTERNAL";
-    if (res.status === 401 && onUnauthorized) {
-      onUnauthorized();
-    }
-    throw new ApiClientError(res.status, code, json.error?.message ?? "Request failed", json.error?.details);
-  }
+// Multipart upload - deliberately does not set Content-Type so fetch can add
+// the multipart boundary itself; the JSON envelope handling is otherwise
+// identical to apiRequest.
+export async function apiUpload<T>(path: string, formData: FormData): Promise<{ data: T; meta?: unknown }> {
+  const url = new URL(path, API_URL);
+  const headers: Record<string, string> = {};
+  if (authToken) headers.Authorization = `Bearer ${authToken}`;
 
-  return { data: json.data as T, meta: json.meta };
+  const res = await fetch(url.toString(), {
+    method: "POST",
+    headers,
+    body: formData,
+  });
+
+  return handleResponse<T>(res);
 }

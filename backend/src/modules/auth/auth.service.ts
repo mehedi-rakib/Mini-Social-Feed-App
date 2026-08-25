@@ -50,7 +50,6 @@ export async function signup(input: SignupInput) {
       emailLower,
       passwordHash,
       displayName: input.displayName ?? input.username,
-      fcmTokens: [],
     },
   });
 

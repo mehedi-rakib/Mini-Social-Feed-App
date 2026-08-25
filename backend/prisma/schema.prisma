@@ -15,19 +15,37 @@ model User {
   emailLower    String   @unique
   passwordHash  String
   displayName   String
-  fcmTokens     Json     @default("[]")
   createdAt     DateTime @default(now())
 
-  posts    Post[]
-  likes    Like[]
-  comments Comment[]
+  posts            Post[]
+  likes            Like[]
+  comments         Comment[]
+  devices          Device[]
+  conversationsAsA Conversation[] @relation("ConversationsAsA")
+  conversationsAsB Conversation[] @relation("ConversationsAsB")
+  messages         Message[]
 
   @@map("users")
+}
+
+model Device {
+  id         String   @id @default(cuid())
+  userId     String
+  token      String   @unique
+  platform   String   @default("ANDROID")
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("devices")
 }
 
 model Post {
   id           String   @id @default(cuid())
   content      String   @db.VarChar(500)
+  imageUrl     String?
   authorId     String
   likeCount    Int      @default(0)
   commentCount Int      @default(0)
@@ -68,4 +86,37 @@ model Comment {
 
   @@index([postId, createdAt])
   @@map("comments")
+}
+
+model Conversation {
+  id                 String   @id @default(cuid())
+  userAId            String
+  userBId            String
+  lastMessagePreview String?  @db.VarChar(120)
+  lastMessageAt      DateTime @default(now())
+  createdAt          DateTime @default(now())
+
+  userA    User      @relation("ConversationsAsA", fields: [userAId], references: [id], onDelete: Cascade)
+  userB    User      @relation("ConversationsAsB", fields: [userBId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@unique([userAId, userBId])
+  @@index([userAId, lastMessageAt])
+  @@index([userBId, lastMessageAt])
+  @@map("conversations")
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String
+  senderId       String
+  content        String?  @db.VarChar(2000)
+  imageUrl       String?
+  createdAt      DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
 }

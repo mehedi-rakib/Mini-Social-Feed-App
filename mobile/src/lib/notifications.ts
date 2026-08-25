@@ -2,22 +2,36 @@ import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import { Platform } from "react-native";
 import { router } from "expo-router";
+import Constants from "expo-constants";
 import * as devicesApi from "@/api/devices";
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+// Expo Go on Android no longer ships the native push module (removed in
+// SDK 53) - calling into expo-notifications there throws synchronously, which
+// would crash the app on import since this module is pulled in from the tabs
+// layout. Push only works in a dev client or standalone build.
+const isExpoGo = Constants.appOwnership === "expo";
+
+if (!isExpoGo) {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    }),
+  });
+}
 
 let currentToken: string | null = null;
 let tokenSubscription: Notifications.Subscription | null = null;
 let responseSubscription: Notifications.Subscription | null = null;
 
 export async function setupPushNotifications(): Promise<void> {
+  if (isExpoGo) {
+    console.warn("Push notifications aren't supported in Expo Go - use a development build.");
+    return;
+  }
+
   // iOS simulators can never receive real push, so skip there. Android
   // emulators with Google Play Services *can* receive FCM, so only iOS
   // is gated on Device.isDevice.
@@ -75,8 +89,12 @@ export async function setupPushNotifications(): Promise<void> {
     });
 
     responseSubscription = Notifications.addNotificationResponseReceivedListener((response) => {
-      const postId = response.notification.request.content.data?.postId as string | undefined;
-      if (postId) {
+      const data = response.notification.request.content.data;
+      const conversationId = data?.conversationId as string | undefined;
+      const postId = data?.postId as string | undefined;
+      if (conversationId) {
+        router.push(`/chat/${conversationId}`);
+      } else if (postId) {
         router.push(`/post/${postId}`);
       }
     });

@@ -6,6 +6,7 @@ import type { CreatePostInput, ListPostsQuery } from "./posts.schema.js";
 export interface PublicPost {
   id: string;
   content: string;
+  imageUrl: string | null;
   author: { id: string; username: string };
   likeCount: number;
   commentCount: number;
@@ -19,6 +20,7 @@ function serializePost(post: PostWithAuthor, likedByMe: boolean): PublicPost {
   return {
     id: post.id,
     content: post.content,
+    imageUrl: post.imageUrl,
     author: { id: post.author.id, username: post.author.username },
     likeCount: post.likeCount,
     commentCount: post.commentCount,
@@ -29,7 +31,7 @@ function serializePost(post: PostWithAuthor, likedByMe: boolean): PublicPost {
 
 export async function createPost(authorId: string, input: CreatePostInput): Promise<PublicPost> {
   const post = await prisma.post.create({
-    data: { content: input.content, authorId },
+    data: { content: input.content, imageUrl: input.imageUrl, authorId },
     include: { author: { select: { id: true, username: true } } },
   });
 

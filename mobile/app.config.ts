@@ -6,18 +6,18 @@ import type { ExpoConfig } from "expo/config";
 const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? "https://pricing.mehedirakib.com";
 
 const config: ExpoConfig = {
-  name: "Mini Social Feed",
-  slug: "mini-social-feed",
+  name: "Gossip Girls",
+  slug: "gossip-girls",
   version: "1.0.0",
   orientation: "portrait",
   icon: "./assets/images/icon.png",
-  scheme: "mini-social-feed",
+  scheme: "gossip-girls",
   userInterfaceStyle: "automatic",
   ios: {
     icon: "./assets/expo.icon",
   },
   android: {
-    package: "com.mehedirakib.minifeed",
+    package: "com.mehedirakib.gossipgirls",
     googleServicesFile: "./google-services.json",
     adaptiveIcon: {
       backgroundColor: "#E6F4FE",
@@ -46,6 +46,21 @@ const config: ExpoConfig = {
       "expo-notifications",
       {
         color: "#208AEF",
+      },
+    ],
+    [
+      "expo-image-picker",
+      {
+        photosPermission: "Allow Gossip Girls to access your photos to attach images to posts and messages.",
+      },
+    ],
+    [
+      "expo-build-properties",
+      {
+        android: {
+          enableProguardInReleaseBuilds: true,
+          enableShrinkResourcesInReleaseBuilds: true,
+        },
       },
     ],
   ],

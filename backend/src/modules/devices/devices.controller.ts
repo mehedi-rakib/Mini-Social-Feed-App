@@ -5,8 +5,8 @@ import { registerDevice, unregisterDevice } from "./devices.service.js";
 import type { DeviceTokenInput } from "./devices.schema.js";
 
 export const registerDeviceHandler = asyncHandler(async (req: Request, res: Response) => {
-  const { token } = req.body as DeviceTokenInput;
-  await registerDevice(req.user!.id, token);
+  const { token, platform } = req.body as DeviceTokenInput;
+  await registerDevice(req.user!.id, token, platform);
   ok(res, { registered: true });
 });
 

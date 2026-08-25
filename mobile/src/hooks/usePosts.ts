@@ -2,11 +2,11 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tansta
 import * as postsApi from "@/api/posts";
 import type { Post } from "@/api/types";
 
-export function usePosts(username?: string) {
+export function usePosts() {
   return useInfiniteQuery({
-    queryKey: ["posts", username ?? null],
+    queryKey: ["posts"],
     queryFn: ({ pageParam }: { pageParam: string | undefined }) =>
-      postsApi.listPosts({ limit: 10, cursor: pageParam, username }),
+      postsApi.listPosts({ limit: 10, cursor: pageParam }),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => (lastPage.meta.hasMore ? (lastPage.meta.nextCursor ?? undefined) : undefined),
   });
@@ -22,7 +22,8 @@ export function usePost(id: string) {
 export function useCreatePost() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (content: string) => postsApi.createPost(content),
+    mutationFn: ({ content, imageUrl }: { content: string; imageUrl?: string }) =>
+      postsApi.createPost(content, imageUrl),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["posts"] });
     },
