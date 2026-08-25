@@ -12,7 +12,8 @@ Live instance: `https://pricing.mehedirakib.com`
 - Prisma ORM + MySQL
 - JWT auth (`jsonwebtoken` + `bcryptjs`)
 - Zod request validation
-- `firebase-admin` — Cloud Messaging only, for like/comment push notifications
+- `firebase-admin` — Cloud Messaging only, for like/comment/message push notifications
+- `multer` — local-disk image uploads, served back as static files
 - `express-rate-limit`, `helmet`, `cors`
 
 ## 1. Install
@@ -70,6 +71,31 @@ For local development iteration (creates new migrations from schema changes):
 npm run db:migrate          # prisma migrate dev
 ```
 
+### Upgrading an existing deployment (device table migration)
+
+Push tokens used to live as a JSON array on `users.fcmTokens`. That's now a
+proper `devices` table (one row per physical device, so a device that logs
+into a different account doesn't keep leaking notifications to the old one).
+If you're deploying on top of an existing database, run these **in order**:
+
+```bash
+npm run db:migrate:deploy         # applies the migration that adds `devices` (fcmTokens still present)
+npm run db:backfill-devices       # copies existing fcmTokens rows into `devices`
+npm run db:migrate:deploy         # applies the second migration that drops `fcmTokens`
+```
+
+A brand-new database just needs the normal `npm run db:migrate:deploy` — both
+migrations apply back to back and there's nothing to backfill.
+
+### Uploaded images
+
+`POST /api/uploads/image` writes files to `backend/uploads/` and they're
+served back at `/uploads/<file>`. That directory needs to exist and be
+writable by the Node process on whatever host runs the server — it's created
+automatically on startup if missing, but on a re-deployed/ephemeral host
+(containers, serverless) local disk won't persist and this needs to point at
+a real volume or be swapped for object storage instead.
+
 ## 4. Run it
 
 ```bash
@@ -126,20 +152,28 @@ Every response follows the same shape:
 | POST | `/api/auth/login` | – | `{ email, password }` |
 | GET | `/api/auth/me` | ✔ | – |
 | GET | `/api/posts` | ✔ | `?limit=10&cursor=<postId>&username=<name>` |
-| POST | `/api/posts` | ✔ | `{ content }` |
+| POST | `/api/posts` | ✔ | `{ content, imageUrl? }` |
 | GET | `/api/posts/:id` | ✔ | – |
 | POST | `/api/posts/:id/like` | ✔ | – (toggles like/unlike) |
 | POST | `/api/posts/:id/comment` | ✔ | `{ content }` |
 | GET | `/api/posts/:id/comments` | ✔ | `?limit=20&cursor=<commentId>` |
-| POST | `/api/devices` | ✔ | `{ token, platform?: "ANDROID" }` — register an FCM push token |
+| POST | `/api/uploads/image` | ✔ | multipart, field name `image` (jpeg/png/webp, max 5MB) → `{ url }` |
+| POST | `/api/devices` | ✔ | `{ token, platform?: "ANDROID" \| "IOS" }` — register a push token for this device |
 | DELETE | `/api/devices` | ✔ | `{ token }` — call on logout |
+| GET | `/api/conversations` | ✔ | this user's conversations, newest first |
+| POST | `/api/conversations` | ✔ | `{ userId }` — find-or-create a 1:1 conversation |
+| GET | `/api/conversations/:id` | ✔ | – |
+| GET | `/api/conversations/:id/messages` | ✔ | `?limit=30&cursor=<messageId>` |
+| POST | `/api/conversations/:id/messages` | ✔ | `{ content?, imageUrl? }` — at least one required |
 
 **Validation:**
 - `username`: 3–20 chars, letters/numbers/underscore only
 - `password`: min 8 chars
 - post `content`: 1–500 chars, trimmed
 - comment `content`: 1–1000 chars, trimmed
-- `limit` on `/api/posts`: 1–20 (default 10); on `/api/posts/:id/comments`: 1–50 (default 20)
+- message `content`: 1–2000 chars, trimmed (or an `imageUrl`, or both)
+- `limit` on `/api/posts`: 1–20 (default 10); on `/api/posts/:id/comments`: 1–50 (default 20); on
+  `/api/conversations/:id/messages`: 1–50 (default 30)
 
 ### Sample requests/responses
 
@@ -169,12 +203,13 @@ Every response follows the same shape:
 
 ### Notifications (FCM)
 
-Liking or commenting on someone else's post triggers a push notification to
-every FCM token registered on the post author's account (via `POST
-/api/devices`). A user never gets notified for their own like/comment. Push
-is fired after the response is sent and never blocks or fails the API call —
-delivery errors are logged, and tokens Firebase reports as
-`registration-token-not-registered` are pruned automatically.
+Liking or commenting on someone else's post, or sending them a chat message,
+triggers a push notification to every device registered on that user's
+account (via `POST /api/devices`). A user never gets notified for their own
+like/comment/message. Push is fired after the response is sent and never
+blocks or fails the API call — delivery errors are logged, and tokens
+Firebase reports as `registration-token-not-registered` are pruned
+automatically (the corresponding `devices` row is deleted).
 
 ---
 
@@ -190,5 +225,18 @@ delivery errors are logged, and tokens Firebase reports as
 - **Auth**: same generic "Invalid email or password" message on wrong email
   vs. wrong password, to avoid user enumeration.
 - **Modules**: each domain (`auth`, `posts`, `likes`, `comments`, `devices`,
-  `notifications`) has `.routes.ts` / `.controller.ts` / `.service.ts` /
-  `.schema.ts`. Controllers stay thin; all data access lives in services.
+  `chat`, `notifications`) has `.routes.ts` / `.controller.ts` /
+  `.service.ts` / `.schema.ts` (`uploads` skips `.service.ts`/`.schema.ts` —
+  there's no database involved, just multer + a static path). Controllers
+  stay thin; all data access lives in services.
+- **Devices**: `devices.token` is globally unique, not scoped per user —
+  registering a token always reassigns it to whoever's currently logged in
+  on that device (upsert by token), instead of leaking notifications to
+  whichever account registered it first. One account can have any number of
+  device rows.
+- **Chat**: a `Conversation` row's `userAId`/`userBId` are the two
+  participant ids sorted lexicographically, so there's exactly one
+  conversation per pair regardless of who starts it (`@@unique([userAId,
+  userBId])`). `lastMessagePreview`/`lastMessageAt` are denormalized onto the
+  conversation (same idea as `Post.likeCount`) so the conversation list is a
+  single cheap query.

@@ -4,9 +4,12 @@ import helmet from "helmet";
 import { ok, fail } from "./utils/response.js";
 import { errorHandler } from "./middleware/error.js";
 import { globalLimiter } from "./middleware/rateLimit.js";
+import { UPLOAD_DIR } from "./lib/upload.js";
 import authRoutes from "./modules/auth/auth.routes.js";
 import postRoutes from "./modules/posts/posts.routes.js";
 import deviceRoutes from "./modules/devices/devices.routes.js";
+import uploadRoutes from "./modules/uploads/uploads.routes.js";
+import chatRoutes from "./modules/chat/chat.routes.js";
 
 const app = express();
 
@@ -32,10 +35,21 @@ app.use(express.json({ limit: "100kb" }));
 
 app.get("/health", (_req, res) => ok(res, { status: "ok" }));
 
+// Uploaded images need to be fetchable cross-origin (Expo web dev server,
+// or any client on a different origin than the API) - helmet's default
+// same-origin policy would otherwise block <Image> from loading them.
+app.use(
+  "/uploads",
+  helmet.crossOriginResourcePolicy({ policy: "cross-origin" }),
+  express.static(UPLOAD_DIR, { maxAge: "7d" })
+);
+
 app.use("/api", globalLimiter);
 app.use("/api/auth", authRoutes);
 app.use("/api/posts", postRoutes);
 app.use("/api/devices", deviceRoutes);
+app.use("/api/uploads", uploadRoutes);
+app.use("/api/conversations", chatRoutes);
 
 app.use((_req, res) => fail(res, 404, "NOT_FOUND", "Route not found"));
 

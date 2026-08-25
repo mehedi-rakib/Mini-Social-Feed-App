@@ -1,7 +1,7 @@
 import { StyleSheet, TextInput, View, type TextInputProps } from "react-native";
 import { ThemedText } from "@/components/themed-text";
 import { useTheme } from "@/hooks/use-theme";
-import { Spacing } from "@/constants/theme";
+import { CardShadow, Spacing } from "@/constants/theme";
 
 interface AuthFieldProps extends TextInputProps {
   error?: string;
@@ -16,6 +16,7 @@ export function AuthField({ error, style, ...rest }: AuthFieldProps) {
         placeholderTextColor={theme.textSecondary}
         style={[
           styles.input,
+          CardShadow,
           { color: theme.text, backgroundColor: theme.backgroundElement, borderColor: theme.border },
           style,
         ]}

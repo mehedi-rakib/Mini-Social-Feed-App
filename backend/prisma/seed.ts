@@ -25,7 +25,6 @@ async function main() {
         emailLower: u.email.toLowerCase(),
         passwordHash,
         displayName: u.displayName,
-        fcmTokens: [],
       },
     });
     userIds[u.username] = user.id;

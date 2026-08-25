@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { KeyboardAvoidingScreen } from "@/components/KeyboardAvoidingScreen";
 import { useTheme } from "@/hooks/use-theme";
 import { Spacing } from "@/constants/theme";
 
@@ -19,7 +20,7 @@ export function AuthLayout({ heading, subheading, footer, children }: AuthLayout
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.flex}>
+        <KeyboardAvoidingScreen style={styles.flex}>
           <ScrollView
             contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled"
@@ -44,7 +45,7 @@ export function AuthLayout({ heading, subheading, footer, children }: AuthLayout
 
             <View style={styles.footer}>{footer}</View>
           </ScrollView>
-        </KeyboardAvoidingView>
+        </KeyboardAvoidingScreen>
       </SafeAreaView>
     </ThemedView>
   );

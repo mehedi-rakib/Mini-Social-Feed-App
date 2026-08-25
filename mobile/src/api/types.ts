@@ -13,6 +13,7 @@ export interface AuthResponse {
 export interface Post {
   id: string;
   content: string;
+  imageUrl: string | null;
   author: { id: string; username: string };
   likeCount: number;
   commentCount: number;
@@ -30,4 +31,20 @@ export interface Comment {
 export interface PageMeta {
   nextCursor: string | null;
   hasMore: boolean;
+}
+
+export interface Conversation {
+  id: string;
+  otherUser: { id: string; username: string };
+  lastMessagePreview: string | null;
+  lastMessageAt: string;
+}
+
+export interface Message {
+  id: string;
+  conversationId: string;
+  sender: { id: string; username: string };
+  content: string | null;
+  imageUrl: string | null;
+  createdAt: string;
 }

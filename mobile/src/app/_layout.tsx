@@ -1,9 +1,9 @@
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import { useColorScheme } from "react-native";
+import { AppState, type AppStateStatus, useColorScheme } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, focusManager } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { RootNavigationGuard } from "@/components/RootNavigationGuard";
@@ -42,6 +42,14 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1 } },
 });
 
+// TanStack Query's default focus detection listens for a DOM
+// visibilitychange event that doesn't exist in React Native, so without this
+// it treats the app as always-focused - chat's refetchInterval polls would
+// keep firing in the background. AppState is the RN equivalent signal.
+function onAppStateChange(status: AppStateStatus) {
+  focusManager.setFocused(status === "active");
+}
+
 function GateOnAuth() {
   const { isLoading } = useAuth();
   const theme = useTheme();
@@ -69,6 +77,7 @@ function GateOnAuth() {
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="post/[id]" options={{ title: "Post" }} />
+        <Stack.Screen name="chat/[id]" options={{ title: "Chat" }} />
       </Stack>
     </RootNavigationGuard>
   );
@@ -76,6 +85,11 @@ function GateOnAuth() {
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", onAppStateChange);
+    return () => subscription.remove();
+  }, []);
 
   return (
     <SafeAreaProvider>
