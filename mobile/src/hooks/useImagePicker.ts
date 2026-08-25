@@ -4,7 +4,6 @@ import { uploadImage } from "@/api/upload";
 
 export function useImagePicker() {
   const [imageUri, setImageUri] = useState<string | null>(null);
-  const [mimeType, setMimeType] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
   const pickImage = useCallback(async () => {
@@ -19,16 +18,11 @@ export function useImagePicker() {
 
     if (!result.canceled && result.assets[0]) {
       setImageUri(result.assets[0].uri);
-      // The picker reports the asset's real mime type - trust that over
-      // guessing from the uri's extension, which content:// uris on Android
-      // often don't have.
-      setMimeType(result.assets[0].mimeType ?? null);
     }
   }, []);
 
   const clearImage = useCallback(() => {
     setImageUri(null);
-    setMimeType(null);
   }, []);
 
   // Shared by every screen that attaches an optional image to a post/message:
@@ -38,12 +32,12 @@ export function useImagePicker() {
     if (!imageUri) return undefined;
     setIsUploading(true);
     try {
-      const { url } = await uploadImage(imageUri, mimeType ?? undefined);
+      const { url } = await uploadImage(imageUri);
       return url;
     } finally {
       setIsUploading(false);
     }
-  }, [imageUri, mimeType]);
+  }, [imageUri]);
 
   return { imageUri, pickImage, clearImage, isUploading, uploadIfPresent };
 }
