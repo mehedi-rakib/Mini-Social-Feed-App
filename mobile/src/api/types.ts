@@ -25,6 +25,8 @@ export interface Comment {
   id: string;
   content: string;
   user: { id: string; username: string };
+  likeCount: number;
+  likedByMe: boolean;
   createdAt: string;
 }
 

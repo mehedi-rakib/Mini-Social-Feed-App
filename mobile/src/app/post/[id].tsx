@@ -11,7 +11,7 @@ import { KeyboardAvoidingScreen } from "@/components/KeyboardAvoidingScreen";
 import { useTheme } from "@/hooks/use-theme";
 import { useAuth } from "@/context/AuthContext";
 import { usePost, useToggleLike } from "@/hooks/usePosts";
-import { useComments, useAddComment } from "@/hooks/useComments";
+import { useComments, useAddComment, useToggleCommentLike } from "@/hooks/useComments";
 import { useStartConversation } from "@/hooks/useChat";
 import { resolveMediaUrl, ApiClientError } from "@/api/client";
 import { CardShadow, Spacing } from "@/constants/theme";
@@ -28,6 +28,7 @@ export default function PostDetailScreen() {
   const commentsQuery = useComments(id);
   const toggleLike = useToggleLike();
   const addComment = useAddComment(id);
+  const toggleCommentLike = useToggleCommentLike(id);
   const startConversation = useStartConversation();
 
   const [text, setText] = useState("");
@@ -51,6 +52,10 @@ export default function PostDetailScreen() {
     });
   }
 
+  function onOpenProfile(username: string) {
+    router.push(`/profile/${username}`);
+  }
+
   return (
     <ThemedView style={styles.container}>
       <Stack.Screen options={{ title: "Post" }} />
@@ -67,7 +72,11 @@ export default function PostDetailScreen() {
                 ListHeaderComponent={
                   <ThemedView type="backgroundElement" style={[styles.postCard, CardShadow]}>
                     <View style={styles.headerRow}>
-                      <View style={styles.headerLeft}>
+                      <Pressable
+                        onPress={() => onOpenProfile(postQuery.data!.author.username)}
+                        hitSlop={6}
+                        style={styles.headerLeft}
+                      >
                         <Avatar username={postQuery.data.author.username} />
                         <View>
                           <ThemedText type="smallBold">@{postQuery.data.author.username}</ThemedText>
@@ -75,7 +84,7 @@ export default function PostDetailScreen() {
                             {formatRelativeTime(postQuery.data.createdAt)}
                           </ThemedText>
                         </View>
-                      </View>
+                      </Pressable>
                       {user?.id !== postQuery.data.author.id && (
                         <Pressable onPress={() => onMessage(postQuery.data!.author.id)} hitSlop={10}>
                           <Ionicons name="chatbubble-outline" size={18} color={theme.textSecondary} />
@@ -105,10 +114,14 @@ export default function PostDetailScreen() {
                 }
                 renderItem={({ item }: { item: Comment }) => (
                   <View style={styles.commentRow}>
-                    <Avatar username={item.user.username} size={28} />
+                    <Pressable onPress={() => onOpenProfile(item.user.username)} hitSlop={6}>
+                      <Avatar username={item.user.username} size={28} />
+                    </Pressable>
                     <View style={styles.commentBody}>
                       <View style={styles.commentHeaderRow}>
-                        <ThemedText type="smallBold">@{item.user.username}</ThemedText>
+                        <Pressable onPress={() => onOpenProfile(item.user.username)} hitSlop={6}>
+                          <ThemedText type="smallBold">@{item.user.username}</ThemedText>
+                        </Pressable>
                         {user?.id !== item.user.id && (
                           <Pressable onPress={() => onMessage(item.user.id)} hitSlop={10}>
                             <Ionicons name="chatbubble-outline" size={15} color={theme.textSecondary} />
@@ -116,9 +129,20 @@ export default function PostDetailScreen() {
                         )}
                       </View>
                       <ThemedText>{item.content}</ThemedText>
-                      <ThemedText type="small" themeColor="textSecondary">
-                        {formatRelativeTime(item.createdAt)}
-                      </ThemedText>
+                      <View style={styles.commentFooterRow}>
+                        <ThemedText type="small" themeColor="textSecondary">
+                          {formatRelativeTime(item.createdAt)}
+                        </ThemedText>
+                        <Pressable
+                          onPress={() => toggleCommentLike.mutate(item.id)}
+                          hitSlop={10}
+                          style={styles.commentLikeButton}
+                        >
+                          <ThemedText type="small" style={{ color: item.likedByMe ? theme.danger : theme.textSecondary }}>
+                            {item.likedByMe ? "♥" : "♡"} {item.likeCount > 0 ? item.likeCount : ""}
+                          </ThemedText>
+                        </Pressable>
+                      </View>
                     </View>
                   </View>
                 )}
@@ -190,6 +214,8 @@ const styles = StyleSheet.create({
   commentRow: { flexDirection: "row", gap: Spacing.two, paddingVertical: Spacing.two },
   commentBody: { flex: 1, gap: Spacing.half },
   commentHeaderRow: { flexDirection: "row", alignItems: "center", gap: Spacing.two },
+  commentFooterRow: { flexDirection: "row", alignItems: "center", gap: Spacing.two },
+  commentLikeButton: { paddingVertical: Spacing.half },
   emptyComments: { textAlign: "center", marginTop: Spacing.four },
   composer: {
     flexDirection: "row",

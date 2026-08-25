@@ -1,4 +1,5 @@
-import { FlatList, Pressable, StyleSheet, View } from "react-native";
+import { FlatList, Pressable, RefreshControl, StyleSheet, View } from "react-native";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { ThemedText } from "@/components/themed-text";
@@ -34,6 +35,7 @@ export default function ChatListScreen() {
             </View>
           ) : !data || data.length === 0 ? (
             <View style={styles.centerBox}>
+              <Ionicons name="chatbubbles-outline" size={40} color={theme.textSecondary} />
               <ThemedText themeColor="textSecondary" style={styles.centerText}>
                 No conversations yet — message someone from the feed to start chatting.
               </ThemedText>
@@ -47,8 +49,9 @@ export default function ChatListScreen() {
               )}
               ItemSeparatorComponent={() => <View style={{ height: Spacing.two }} />}
               contentContainerStyle={styles.listContent}
-              refreshing={isRefetching}
-              onRefresh={refetch}
+              refreshControl={
+                <RefreshControl refreshing={isRefetching} onRefresh={refetch} colors={[theme.primary]} tintColor={theme.primary} />
+              }
             />
           )}
         </View>
@@ -58,13 +61,19 @@ export default function ChatListScreen() {
 }
 
 function ConversationRow({ conversation, onPress }: { conversation: Conversation; onPress: () => void }) {
+  const router = useRouter();
+
   return (
     <Pressable onPress={onPress}>
       <ThemedView type="backgroundElement" style={[styles.row, CardShadow]}>
-        <Avatar username={conversation.otherUser.username} size={44} />
+        <Pressable onPress={() => router.push(`/profile/${conversation.otherUser.username}`)} hitSlop={6}>
+          <Avatar username={conversation.otherUser.username} size={44} />
+        </Pressable>
         <View style={styles.rowBody}>
           <View style={styles.rowHeader}>
-            <ThemedText type="smallBold">@{conversation.otherUser.username}</ThemedText>
+            <Pressable onPress={() => router.push(`/profile/${conversation.otherUser.username}`)} hitSlop={6}>
+              <ThemedText type="smallBold">@{conversation.otherUser.username}</ThemedText>
+            </Pressable>
             <ThemedText type="small" themeColor="textSecondary">
               {formatRelativeTime(conversation.lastMessageAt)}
             </ThemedText>

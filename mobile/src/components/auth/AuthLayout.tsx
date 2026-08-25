@@ -30,7 +30,7 @@ export function AuthLayout({ heading, subheading, footer, children }: AuthLayout
               <View style={styles.brandRow}>
                 <View style={[styles.brandMark, { backgroundColor: theme.primary }]} />
                 <ThemedText themeColor="textSecondary" style={styles.brandText}>
-                  MINI SOCIAL
+                  DOSTAGRAM
                 </ThemedText>
               </View>
               <ThemedText type="title" style={styles.heading}>

@@ -78,6 +78,7 @@ function GateOnAuth() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="post/[id]" options={{ title: "Post" }} />
         <Stack.Screen name="chat/[id]" options={{ title: "Chat" }} />
+        <Stack.Screen name="profile/[username]" options={{ title: "Profile" }} />
       </Stack>
     </RootNavigationGuard>
   );

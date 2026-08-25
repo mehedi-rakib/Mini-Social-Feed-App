@@ -6,7 +6,7 @@ import type { ExpoConfig } from "expo/config";
 const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? "https://pricing.mehedirakib.com";
 
 const config: ExpoConfig = {
-  name: "Gossip Girls",
+  name: "Dostagram",
   slug: "gossip-girls",
   version: "1.0.0",
   orientation: "portrait",
@@ -20,7 +20,7 @@ const config: ExpoConfig = {
     package: "com.mehedirakib.gossipgirls",
     googleServicesFile: "./google-services.json",
     adaptiveIcon: {
-      backgroundColor: "#E6F4FE",
+      backgroundColor: "#FCE4EC",
       foregroundImage: "./assets/images/android-icon-foreground.png",
       backgroundImage: "./assets/images/android-icon-background.png",
       monochromeImage: "./assets/images/android-icon-monochrome.png",
@@ -36,7 +36,7 @@ const config: ExpoConfig = {
     [
       "expo-splash-screen",
       {
-        backgroundColor: "#208AEF",
+        backgroundColor: "#E1306C",
         image: "./assets/images/splash-icon.png",
         imageWidth: 76,
       },
@@ -45,13 +45,13 @@ const config: ExpoConfig = {
     [
       "expo-notifications",
       {
-        color: "#208AEF",
+        color: "#E1306C",
       },
     ],
     [
       "expo-image-picker",
       {
-        photosPermission: "Allow Gossip Girls to access your photos to attach images to posts and messages.",
+        photosPermission: "Allow Dostagram to access your photos to attach images to posts and messages.",
       },
     ],
     [

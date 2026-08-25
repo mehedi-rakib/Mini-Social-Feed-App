@@ -1,7 +1,7 @@
 import { prisma } from "../../lib/prisma.js";
 import { messaging } from "../../lib/messaging.js";
 
-type NotificationType = "like" | "comment" | "message";
+type NotificationType = "like" | "comment" | "comment_like" | "message";
 
 interface NotifyInput {
   recipientId: string;
@@ -21,6 +21,9 @@ function buildMessage(input: NotifyInput): { title: string; body: string } {
   if (input.type === "comment") {
     const preview = (input.postPreview ?? "").slice(0, 60);
     return { title: "New comment", body: `${input.actorUsername} commented: ${preview}` };
+  }
+  if (input.type === "comment_like") {
+    return { title: "New like", body: `${input.actorUsername} liked your comment` };
   }
   const preview = input.messagePreview ? input.messagePreview.slice(0, 60) : "Sent a photo";
   return { title: "New message", body: `${input.actorUsername}: ${preview}` };

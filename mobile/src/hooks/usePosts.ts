@@ -12,6 +12,17 @@ export function usePosts() {
   });
 }
 
+export function useUserPosts(username: string) {
+  return useInfiniteQuery({
+    queryKey: ["posts", "user", username],
+    queryFn: ({ pageParam }: { pageParam: string | undefined }) =>
+      postsApi.listPosts({ limit: 10, cursor: pageParam, username }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => (lastPage.meta.hasMore ? (lastPage.meta.nextCursor ?? undefined) : undefined),
+    enabled: !!username,
+  });
+}
+
 export function usePost(id: string) {
   return useQuery({
     queryKey: ["post", id],

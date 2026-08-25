@@ -22,6 +22,10 @@ export const addCommentHandler = asyncHandler(async (req: Request, res: Response
 });
 
 export const listCommentsHandler = asyncHandler(async (req: Request, res: Response) => {
-  const { data, meta } = await listComments(req.params.id as string, req.validatedQuery as ListCommentsQuery);
+  const { data, meta } = await listComments(
+    req.params.id as string,
+    req.user!.id,
+    req.validatedQuery as ListCommentsQuery
+  );
   ok(res, data, meta);
 });

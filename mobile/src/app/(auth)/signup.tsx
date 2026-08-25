@@ -50,7 +50,7 @@ export default function SignupScreen() {
   return (
     <AuthLayout
       heading="Create account"
-      subheading="Join Mini Social in a few seconds"
+      subheading="Join Dostagram in a few seconds"
       footer={
         <Link href="/login" asChild>
           <Pressable hitSlop={8}>
